@@ -1,17 +1,12 @@
-"""
-1. Добавлена обработка слов с дефисом.
-2. Добавлена обработка слов с буквой ё (ввод е = ввод ё).
-3. Вывод загаданного слова при победе.
-4. Добавлены очки.
-5. Помощь стоит 2 очка.
-"""
-
 import json
 from random import choice, randint
 
 
-def chose_word():  # Рандомный выбор слова, считывание его темы и подсказки.
-    w = choice(words)
+def chose_word(difficulty):  # Рандомный выбор слова, считывание его темы и подсказки.
+    if difficulty == 0:  # Выбор слова по сложности
+        w = choice(words[randint(0, 4)])
+    else:
+        w = choice(words[difficulty - 1])
     return w, data[w], data[w]["definition"]
 
 
@@ -27,23 +22,31 @@ def read_json(lang):  # Открытие json и считывание с фай�
         data = json.load(file)
 
     # Создание списка со всеми словами, их темами и подсказками.
-    words = []
+    words = [[], [], [], [], []]
     for i in data.keys():
-        words.append(i)
+        length = len(i)
+        if length < 4:
+            words[0].append(i)
+        elif length < 7:
+            words[1].append(i)
+        elif length < 10:
+            words[2].append(i)
+        elif length < 14:
+            words[3].append(i)
+        else:
+            words[4].append(i)
     return words, data
 
 
 def validation():  # Обеспечевает правильность ввода
     while True:
         w = input(">>> ").lower()
-        if w == "ё":
-            w = "е"
         if len(w) != 1:
-            print("Введите 1 букву.")
+            print(message[lang]["TooManyLetters"])
         elif w == "?" or w == "!":
             return w
         elif not w.isalpha():
-            print("Введите букву, а не число или символ.")
+            print(message[lang]["Invalid input"])
         else:
             for j in alphabet[lang]:
                 if w == j.lower():
@@ -51,28 +54,138 @@ def validation():  # Обеспечевает правильность ввод�
 
 
 run = True
-mistakes = 0  # Кол-во ошибок
-score = 0  # Кол-во очков
-lang = "ru"  # Язык
+# Язык
+lang = ""
+print("Select language(ru|ua|en):")
+while lang not in ["ru", "ua", "en"]:
+    lang = input(">>> ")
 words, data = read_json(lang)
-msg = 0
-message = ["", "Недостаточно очков."]
+msg = "None"
 
+# Сообщения
+message = {"ru": {"None": "",
+                  "NotEnoughScore": "Недостаточно очков.",
+                  "TooManyLetters": "Введите 1 букву.",
+                  "Invalid input": "Введите букву, а не число или символ.",
+                  "Mistakes": "Ошибки",
+                  "Points": "Очки",
+                  "Victory": "Вы победили!",
+                  "Defeat": "Вы проиграли...",
+                  "Word": "Слово:",
+                  "Replay": "Сыграть ещё?",
+                  "SelectDifficulty": "Выберите сложность:",
+                  "InvalidNumber": "Неверный ввод.",
+                  "Difficulty": "  0: случайная длинна слова."
+                                "\n  1: 1-3 буквы."
+                                "\n  2: 4-6 буквы."
+                                "\n  3: 7-9 буквы."
+                                "\n  4: 10-13 буквы."
+                                "\n  5: больше 13 букв."},
+           "ua": {"None": "",
+                  "NotEnoughScore": "No",
+                  "TooManyLetters": "Введіть 1 літеру.",
+                  "Invalid input": "Введіть літеру, а не число або символ.",
+                  "Mistakes": "Помилки",
+                  "Points": "Очки",
+                  "Victory": "Вы виграли!",
+                  "Defeat": "Вы програли...",
+                  "Word": "Слово:",
+                  "Replay": "Грати ще?",
+                  "SelectDifficulty": "Оберіть складність:",
+                  "InvalidNumber": "Неправильне введення.",
+                  "Difficulty": "  0: випадкова довжина слова."
+                                "\n  1: 1-3 літери."
+                                "\n  2: 4-6 літер."
+                                "\n  3: 7-9 літер."
+                                "\n  4: 10-13 літер."
+                                "\n  5: більше 13 літер."
+                  },
+           "en": {"None": "",
+                  "NotEnoughScore": "Not enough points.",
+                  "TooManyLetters": "Input 1 letter.",
+                  "Invalid input": "Enter a letter, not a number or symbol.",
+                  "Mistakes": "Mistakes",
+                  "Points": "Points",
+                  "Victory": "You won!",
+                  "Defeat": "You lost...",
+                  "Word": "Word:",
+                  "Replay": "Play again?",
+                  "SelectDifficulty": "Select difficulty:",
+                  "InvalidNumber": "Invalid input.",
+                  "Difficulty": "  0: random word length."
+                                "\n  1: 1-3 letters."
+                                "\n  2: 4-6 letters."
+                                "\n  3: 7-9 letters."
+                                "\n  4: 10-13 letters."
+                                "\n  5: more than 13 letters."
+                  }}
+
+# Текст в начале игры
+intoduction = {"ru": """
+Игра Виселица
+=================================================
+Вам необходимо отгадать загаданное слово,
+вводя по букве с клавиатуры.
+Не допускайте более 6 ошибок.
+За каждую отгаданную букву начисляется 1 очко.
+=================================================
+! - показать подсказку
+? - подсказать букву (цена подсказки 2 очка)
+=================================================
+""",
+               "ua": """
+Гра Шибениця
+=================================================
+Вам необхідно відгадати загадане слово,
+вводячи по літері з клавіатури.
+Не допускайте більше 6 помилок.
+За кожну відгадану літеру нараховується 1 очко.
+=================================================
+! - показати підказку
+? - підказати букву (ціна підказки 2 очки)
+=================================================
+""",
+               "en": """
+Hangman game
+================================================
+You need to guess the hidden word,
+entering letter by letter from the keyboard.
+Do not make more than 6 mistakes.
+For each guessed letter, 1 point is awarded.
+================================================
+! - show hint
+? - suggest a letter (suggestion price is 2 points)
+================================================
+                 """}
+print(intoduction[lang])
 # Основной цикл игры
 while run:
-    word, topic, prompt = chose_word()
-    word = "якорёк"
+    difficulty = -1  # Сложность
+    print(message[lang]["SelectDifficulty"])
+    print(message[lang]["Difficulty"])
+    while not 0 < difficulty < 6:
+        try:
+            difficulty = int(input(">>> "))
+        except:
+            print(message[lang])
+
+    word, topic, prompt = chose_word(difficulty)
+    mistakes = 0  # Кол-во ошибок
+    score = 0  # Кол-во очков
     secret = "_" * len(word)  # Слово из прочерков
     dash = word.find("-")
     if dash != -1:
         secret = secret[:dash] + "-" + secret[dash + 1:]  # Добавление дефиса
 
-    alphabet = {"en": """"
-    A B C D E F G H I J K L M 
-    N O P Q R S T U V W X Y Z
-    """, "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "Й", "К",
-                "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
-                "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"]}
+    alphabet = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                       "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                       "W", "X", "Y", "Z"],
+                "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
+                       "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
+                       "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
+                "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
+                       "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
+                       "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
     letters = []  # Введенные буквы
 
     print("#" * 15)
@@ -97,22 +210,22 @@ while run:
             print(i, end=" ")
             n += 1
         print("")
-        print(f"Ошибки: {mistakes}/7")
-        print(f"Очки: {score}")
-        print(message[msg])
-        msg = 0
-        print()
+        print(f"{message[lang]['Mistakes']}: {mistakes}/7")
+        print(f"{message[lang]['Points']}: {score}")
+        print(message[lang][msg])
+        msg = "None"
 
         # Пользовательский ввод и его обработка
         letters.append(validation())
         guessed = False
+        # Помощь игроку
         if letters[-1] == "?":  # Помощь (открытие 1 буквы)
             if score > 1:
                 print()
                 score -= 3
                 letters[-1] = word[secret.find("_")]
             else:
-                msg = 1
+                msg = "NotEnoughScore"
                 guessed = True
         if letters[-1] == "!":  # Подсказка
             print(prompt)
@@ -122,10 +235,7 @@ while run:
             if o == letters[-1].upper():
                 alphabet[lang][alphabet[lang].index(o)] = " "
         for i in range(len(word)):
-            if word[i] == "ё" and letters[-1] == "е":  # Обрабатывает букву ё
-                guessed = True
-                secret = secret[:i] + "ё" + secret[i + 1:]
-            elif word[i] == letters[-1]:
+            if word[i] == letters[-1]:
                 guessed = True
                 secret = secret[:i] + letters[-1] + secret[i + 1:]
         if not guessed:
@@ -135,14 +245,18 @@ while run:
 
         # Победа.
         if secret.find("_") == -1:
-            print("Вы победили!")
-            print(f"Слово: {word}")
+            print(message[lang]["Victory"])
+            print(message[lang]['Word'] + word)
             game = False
 
         # Поражение
         if mistakes == 7:
-            print("Вы проиграли...")
-            print(f"Слово: {word}")
+            print(message[lang]["Defeat"])
+            print(message[lang]['Word'] + word)
             game = False
 
-    run = False
+    # Начать цикл снова
+    print(message[lang]["Replay"] + " +/-")
+    replay = input(">>> ")
+    if replay != "+":
+        run = False
