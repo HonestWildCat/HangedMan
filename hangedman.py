@@ -167,7 +167,7 @@ while run:
         try:
             difficulty = int(input(">>> "))
         except:
-            print(message[lang])
+            print(message[lang]["InvalidNumber"])
 
     word, topic, prompt = chose_word(difficulty)
     mistakes = 0  # Кол-во ошибок
