@@ -13,16 +13,15 @@ def chose_word(difficulty):  # Рандомный выбор слова, счи�
         w = choice(words[randint(0, 4)])
     else:
         w = choice(words[difficulty - 1])
-    return w, data[w]["definition"]
+    secret_word = "_" * len(w)
+    dash = w.find("-")
+    if dash != -1:
+        secret_word = secret_word[:dash] + "-" + secret_word[dash + 1:]  # Добавление дефиса
+    return w.upper(), data[w]["definition"], secret_word.upper()
 
 
 def read_json(language):  # Открытие json и считывание с файла.
-    if language == "ru":
-        path = "words.json"
-    elif language == "ua":
-        path = "words.json"
-    else:
-        path = "words.json"
+    path = f"words_{lang}.json"
     with open(path, "r", encoding='utf-8') as file:
         data = json.load(file)
 
@@ -43,6 +42,53 @@ def read_json(language):  # Открытие json и считывание с ф�
     return words, data
 
 
+def alphabet():
+    font = pygame.font.SysFont('Segoi Script.ttf', int(100 * relative_w))
+    # Определение пределов для вывода алфавита
+    surface = pygame.Rect(display_width - w_p * 57, display_height - h_p * 65, w_p * 50, h_p * 68)
+    max_width, max_height = surface.right, surface.bottom
+    # Начальные точки
+    start_x = surface.left + w_p
+    start_y = surface.top + h_p
+    space = 0
+    up_space = 0
+    if lang in ["ru", "ua"]:
+        letter_width, letter_height = font.render("Щ", False, (77, 85, 194)).get_size()[0], \
+                                      font.render("Й", False, (77, 85, 194)).get_size()[1]
+    else:
+        letter_width, letter_height = font.render("W", False, (77, 85, 194)).get_size()
+    # Вывод в цикле
+    n = 0
+    for letter in letters[lang]:
+        letter_surface = font.render(letter, False, (77, 85, 194))
+        if start_x + space + letter_width >= max_width:
+            up_space += letter_height + h_p
+            space = 0
+        screen.blit(letter_surface, (start_x + space, start_y + up_space))
+        keyboard[n] = Button(start_x + space, start_y + up_space, letter_width, letter_height)
+        space += letter_width + 2 * w_p
+        n += 1
+
+
+def secret_word():
+    font = pygame.font.SysFont('Segoi Script.ttf', int(110 * relative_w))
+
+    surface = pygame.Rect(w_p * 5, h_p * 13, w_p * 90, h_p * 10)
+    start_y = surface.top + h_p
+    space = 0
+    if lang in ["ru", "ua"]:
+        letter_width, letter_height = font.render("Ш", False, (77, 85, 194)).get_size()[0], \
+                                      font.render("Й", False, (77, 85, 194)).get_size()[1]
+    else:
+        letter_width, letter_height = font.render("W", False, (77, 85, 194)).get_size()
+    word_width = len(secret) * (letter_width + w_p)
+    # Вывод в цикле
+    for letter in secret:
+        letter_surface = font.render(letter, False, (77, 85, 194))
+        screen.blit(letter_surface, ((display_width / 2) - (word_width / 2) + space, start_y))
+        space += letter_width + w_p
+
+
 class Button:  # Создает кнопку и выполняет действия при её нажатии
     def __init__(self, x, y, width, height, color=(0, 0, 0), img="none.png", inner_text="", text_color=(0, 0, 0)):
         self.x = x
@@ -56,17 +102,12 @@ class Button:  # Создает кнопку и выполняет действ�
         self.path = img
 
     def create_button(self):
-        self.draw_shape()
         self.write_text()
-        img = pygame.transform.scale(pygame.image.load(f'img/{self.path}'), (80 * relative_w, 80 * relative_h))
-        screen.blit(img, (self.x, self.y - 0.2 * h_p))
+        if self.path != "none.png":
+            img = pygame.transform.scale(pygame.image.load(f'img/{self.path}'), (80 * relative_w, 80 * relative_h))
+            screen.blit(img, (self.x, self.y - 0.2 * h_p))
 
     def write_text(self):
-        pass
-
-    def draw_shape(self):
-        shape = pygame.Rect(self.x, self.y, self.width, self.height)
-        pygame.draw.ellipse(screen, self.color, shape, 1)
         pass
 
     def pressed(self, mouse):
@@ -79,26 +120,30 @@ class Button:  # Создает кнопку и выполняет действ�
             return False
 
 
-def show_text(surface, text, pos, font, color=(77, 85, 194)):  # Отображение текста в пределах экрана
-    max_width, max_height = surface.get_size()
-    x, y = pos
-    words = []
-    w = ""
-    for i in text:
-        w = w + " " + i
-        if len(w) == 20 or i == "Я":
-            words.append(w)
-            w = ""
+def show_score():
+    font = pygame.font.SysFont('Segoi Script.ttf', int(40 * relative_w))
+    surface = pygame.Rect(w_p * 2, h_p * 3, w_p * 10, h_p * 8)
+    letter_surface = font.render(f"Score: {score}", False, (77, 85, 194))
+    screen.blit(letter_surface, surface)
+
+
+def show_text(surface, text):
+    font = pygame.font.SysFont('Segoi Script.ttf', int(40 * relative_w))
+    words = text.split(" ")
+    start_x, start_y = surface.left, surface.top
+    max_width = surface.right
+    space = 2 * w_p
+    up_space = 5 * h_p
+    letter_height = font.render("Й", False, (77, 85, 194)).get_size()[1]
     for word in words:
-        word_surface = font.render(word, 0, color)
-        word_width, word_height = word_surface.get_size()
-        if x + word_width >= max_width:
-            x = pos[0]  # Reset the x.
-            y += word_height  # Start on new row.
-        surface.blit(word_surface, (x, y))
-        x += word_width + w_p
-        x = pos[0]  # Reset the x.
-        y += word_height  # Start on new row.
+        word_width = font.render(word + " ", False, (77, 85, 194)).get_size()[0]
+        if start_x + space + word_width >= max_width:
+            up_space += letter_height + h_p
+            space = 2 * w_p
+
+        word_surface = font.render(word + " ", False, (77, 85, 194))
+        screen.blit(word_surface, (start_x + space, start_y + up_space))
+        space += word_width
 
 
 def resizeDisplay(display_width, display_height):  # Изменение размера окна
@@ -127,8 +172,8 @@ def hangedman():  # Отображение виселицы
 
 
 def markup():  # Разметка прямоугольниками
-    r = pygame.Rect(w_p * 1, h_p * 2, w_p * 10, h_p * 8)
-    pygame.draw.rect(screen, (100, 50, 55), r, 5)
+    # r = pygame.Rect(w_p * 1, h_p * 2, w_p * 10, h_p * 8)
+    # pygame.draw.rect(screen, (100, 50, 55), r, 5)
 
     r1 = pygame.Rect(w_p * 25, h_p * 1, w_p * 50, h_p * 6)
     pygame.draw.rect(screen, (100, 50, 55), r1, 5)
@@ -136,14 +181,14 @@ def markup():  # Разметка прямоугольниками
     # r2 = pygame.Rect(display_width - w_p * 6, h_p * 2, w_p * 5, h_p * 8)
     # pygame.draw.rect(screen, (100, 50, 55), r2, 5)
 
-    r3 = pygame.Rect(w_p * 5, h_p * 13, w_p * 90, h_p * 10)
-    pygame.draw.rect(screen, (100, 50, 55), r3, 5)
+    # r3 = pygame.Rect(w_p * 5, h_p * 13, w_p * 90, h_p * 10)
+    # pygame.draw.rect(screen, (100, 50, 55), r3, 5)
 
     # r4 = pygame.Rect(w_p * 7, display_height - h_p * 72, w_p * 30, h_p * 68)
     # pygame.draw.rect(screen, (100, 50, 55), r4, 5)
 
-    r5 = pygame.Rect(display_width - w_p * 57, display_height - h_p * 72, w_p * 50, h_p * 68)
-    pygame.draw.rect(screen, (100, 50, 55), r5, 5)
+    # r5 = pygame.Rect(display_width - w_p * 57, display_height - h_p * 72, w_p * 50, h_p * 68)
+    # pygame.draw.rect(screen, (100, 50, 55), r5, 5)
 
     # r6 = pygame.Rect(w_p * 1, display_height - h_p * 10, w_p * 5, h_p * 8)
     # pygame.draw.rect(screen, (100, 50, 55), r6, 5)
@@ -156,9 +201,22 @@ lang = "ru"
 difficulty = 2
 words, data = read_json(lang)
 msg = "None"
-word, prompt = chose_word(difficulty)
+word, prompt, secret = chose_word(difficulty)
 print(word)
 print(prompt)
+
+mistakes = 0
+b = 4
+displayIndex = 0
+
+# Разрешение экрана
+display_width = 1600  # windll.user32.GetSystemMetrics(0)
+display_height = 900   # windll.user32.GetSystemMetrics(1)
+w_p = display_width // 100  # 1 процент от ширины екрана
+h_p = display_height // 100  # 1 процент от высоты екрана
+relative_w = display_width / 1600  # Относительная ширина
+relative_h = display_height / 900  # Относительная высота
+print(f"Display: {display_width}x{display_height}")
 
 # Сообщения
 message = {"ru": {"None": "",
@@ -217,18 +275,7 @@ message = {"ru": {"None": "",
                                 "\n  4: 10-13 letters."
                                 "\n  5: more than 13 letters."
                   }}
-mistakes = 0
-b = 4
-displayIndex = 0
 
-# Разрешение экрана
-display_width = 1600  # windll.user32.GetSystemMetrics(0)
-display_height = 900   # windll.user32.GetSystemMetrics(1)
-w_p = display_width // 100  # 1 процент от ширины екрана
-h_p = display_height // 100  # 1 процент от высоты екрана
-relative_w = display_width / 1600  # Относительная ширина
-relative_h = display_height / 900  # Относительная высота
-print(f"Display: {display_width}x{display_height}")
 """
 Список шрифтов на букву 'Б'
 lst = pygame.font.get_fonts()
@@ -239,34 +286,32 @@ for i in lst:
 # Разрешение окна приложения
 screen = pygame.display.set_mode((display_width, display_height))
 
-alphabet = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-                   "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
-                   "W", "X", "Y", "Z"],
-            "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
-                   "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
-                   "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
-            "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
-                   "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
-                   "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
+letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                  "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                  "W", "X", "Y", "Z"],
+           "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
+                  "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
+                  "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
+           "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
+                  "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
+                  "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
 
-# Шрифт
-t = ""
-for i in alphabet["ru"]:
-    t = t + " " + i
-font = pygame.font.SysFont('Segoi Script.ttf', 80)
-text = font.render(t, True, (0, 250, 20))
-# screen.blit(text, (display_width - w_p * 55, display_height // 3))
 
 # Игровые переменные
-mistakes = 0
 mode = "game"
+score = 0
 desc = False
+keyboard = []
+for i in range(len(letters[lang])):
+    keyboard.append(f"{i}")
+f = pygame.font.SysFont('Segoi Script.ttf', 30)
 
 # Кнопки
 description = Button(display_width - w_p * 6, display_height - h_p * 10, w_p * 5, h_p * 8.5, (57, 60, 182),
                      "description.png")
 hint = Button(w_p * 1, display_height - h_p * 10, w_p * 5, h_p * 8.5, (57, 60, 182), "hint.png")
 menu = Button(display_width - w_p * 6, h_p * 2, w_p * 5, h_p * 8.5, (57, 60, 182), "menu.png")
+close_description = Button(w_p * 10, h_p * 30, w_p * 80, h_p * 60)
 while True:
     for event in pygame.event.get():
         # Выход
@@ -295,20 +340,59 @@ while True:
                 print("description")
                 desc = True
             elif hint.pressed(event.pos):
-                print("hint")
+                if score > 1:
+                    score -= 2
+                    place = secret.find("_")
+                    h = word[place]
+                    print(h)
+                    secret = secret[:place] + h + secret[place + 1:]
+                    for i in letters[lang]:
+                        if i == h:
+                            i = " "
             elif menu.pressed(event.pos):
                 print("menu")
+            elif close_description.pressed(event.pos) and desc:
+                desc = False
+            else:  # Нажатие на алфавит
+                for j in range(len(keyboard)):
+                    if keyboard[j].pressed(event.pos):
+                        print(j)
+                        guesed = False
+                        for i in range(len(word)):
+                            if word[i] == letters[lang][j]:
+                                guesed = True
+                                secret = secret[:i] + letters[lang][j] + secret[i + 1:]
+                                score += 1
+                        letters[lang][j] = " "
+                        if not guesed:
+                            if mistakes < 7:
+                                mistakes += 1
     background()
     if mode == "game":
         markup()
-        show_text(screen, alphabet["ru"], (display_width - w_p * 55, display_height // 3), font)
+        alphabet()
+        secret_word()
         hangedman()
         description.create_button()
         hint.create_button()
         menu.create_button()
+        show_score()
+        # Описание
         if desc:
+            description_rect = pygame.Rect(w_p * 10, h_p * 30, w_p * 80, h_p * 60)
+            pygame.draw.rect(screen, (255, 255, 255), description_rect)
             f = pygame.font.SysFont('Segoi Script.ttf', 30)
             h = f.render(prompt, True, (0, 0, 0))
+            show_text(description_rect, prompt)
+        # Победа.
+        if secret.find("_") == -1 and mistakes < 7:
+            h = f.render(message[lang]["Victory"], True, (0, 0, 0))
             screen.blit(h, (w_p * 3, h_p * 25))
+
+        # Поражение
+        if mistakes == 7:
+            h = f.render(message[lang]["Defeat"], True, (0, 0, 0))
+            screen.blit(h, (w_p * 3, h_p * 25))
+
     pygame.display.update()
     pygame.display.flip()

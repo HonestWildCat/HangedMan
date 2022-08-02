@@ -11,13 +11,7 @@ def chose_word(difficulty):  # Рандомный выбор слова, счи�
 
 
 def read_json(lang):  # Открытие json и считывание с файла.
-    if lang == "ru":
-        path = "words.json"
-    elif lang == "ua":
-        path = "words.json"
-    else:
-        path = "words.json"
-
+    path = f"words_{lang}.json"
     with open(path, "r", encoding='utf-8') as file:
         data = json.load(file)
 
