@@ -13,7 +13,9 @@ pygame.display.set_icon(pygame.image.load("img/icon.ico"))
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load('music/Embrace.ogg')
+music_volume = pygame.mixer.music.get_volume()
 click_sound = pygame.mixer.Sound('music/click.wav')
+sound_volume = pygame.mixer.Sound.get_volume(click_sound)
 
 
 def chose_word(difficulty):  # Рандомный выбор слова, считывание его темы и подсказки.
@@ -114,8 +116,20 @@ class Button:  # Создает кнопку и выполняет действ�
 
     def create_button(self):
         self.write_text()
-        # pygame.draw.rect(screen, (100, 50, 55), self.rect, 5)
-        if self.path != "none.png":
+        pygame.draw.rect(screen, (100, 50, 55), self.rect, 5)
+        if self.path == "sound_on.png" or \
+                self.path == "sound_off.png" or \
+                self.path == "settings.png" or \
+                self.path == "music_off.png" or \
+                self.path == "music.png":
+            img = pygame.transform.scale(pygame.image.load(f'img/{self.path}'),
+                                         (50 * relative_w * self.scale, 50 * relative_h * self.scale))
+            screen.blit(img, (self.x + w_p * 0.5, self.y))
+        elif self.path == "back.png":
+            img = pygame.transform.scale(pygame.image.load(f'img/{self.path}'),
+                                         (250 * relative_w * self.scale, 125 * relative_h * self.scale))
+            screen.blit(img, (self.x, self.y - 2 * h_p))
+        elif self.path != "none.png":
             img = pygame.transform.scale(pygame.image.load(f'img/{self.path}'),
                                          (80 * relative_w * self.scale, 80 * relative_h * self.scale))
             screen.blit(img, (self.x, self.y - 0.2 * h_p))
@@ -182,7 +196,7 @@ def hangedman():  # Отображение виселицы
     screen.blit(hangedman_scaled, (w_p * 7, display_height - 650 * relative_h - h_p * 2))
 
 
-lang = "ru"
+lang = "ua"
 difficulty = 2
 words, data = read_json(lang)
 msg = "None"
@@ -191,7 +205,7 @@ print(word)
 print(prompt)
 
 mistakes = 0
-b = 4
+b = 7
 displayIndex = 0
 
 # Разрешение экрана
@@ -222,8 +236,8 @@ message = {"ru": {"None": "",
            "ua": {"None": "",
                   "NotEnoughScore": "Недостатньо очків.",
                   "Invalid input": "Введіть літеру, а не число або символ.",
-                  "Victory": "Вы виграли!",
-                  "Defeat": "Вы програли...",
+                  "Victory": "Ви виграли!",
+                  "Defeat": "Ви програли...",
                   "Replay": "Грати ще?",
                   "SelectDifficulty": "Оберіть складність:",
                   "InvalidNumber": "Неправильне введення.",
@@ -273,12 +287,15 @@ letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
 
 # Игровые переменные
 mode = "game"
+back_mode = "game"
 victory = False
 defeat = False
 game_end = False
 score = 0
 desc = True
 menu_opened = False
+sound_on = True
+music_on = True
 keyboard = []
 for i in range(len(letters[lang])):
     keyboard.append(f"{i}")
@@ -292,9 +309,10 @@ close_description = Button(w_p * 10, h_p * 30, w_p * 80, h_p * 60)
 exit_button = Button(w_p * 1, h_p * 2, w_p * 5, h_p * 8.5, (57, 60, 182), "exit.png")
 repeat = Button(display_width // 2 - w_p * 5, display_height // 2 + h_p * 15, w_p * 9.5, h_p * 17,
                 (57, 60, 182), "repeat.png", 2)
-sound_button = Button(display_width - w_p * 6, h_p * 10, w_p * 5, h_p * 8.5, (57, 60, 182), "sound_on.png")
-music_button = Button(display_width - w_p * 6, h_p * 17, w_p * 5, h_p * 8.5, (57, 60, 182), "music.png")
-settings_button = Button(display_width - w_p * 6, h_p * 25, w_p * 5, h_p * 8.5, (57, 60, 182), "settings.png")
+sound_button = Button(display_width - w_p * 5.5, h_p * 11, w_p * 4, h_p * 6, (57, 60, 182), "sound_on.png")
+music_button = Button(display_width - w_p * 5.5, h_p * 18, w_p * 4, h_p * 6, (57, 60, 182), "music.png")
+settings_button = Button(display_width - w_p * 5.5, h_p * 25, w_p * 4, h_p * 6, (57, 60, 182), "settings.png")
+back_button = Button(display_width // 2 - w_p * 6, display_height - 20 * h_p, w_p * 15.5, h_p * 11, (57, 60, 182), "back.png")
 
 # Зацикленная музыка
 pygame.mixer.music.play(-1)
@@ -324,76 +342,108 @@ while True:
                 displayIndex += 1
                 resizeDisplay(display_width, display_height)
         elif event.type == MOUSEBUTTONDOWN:  # Если нажата кнопка мыши
-            if description.pressed(event.pos):  # Описание
-                click_sound.play()
-                if desc:
-                    desc = False
-                else:
-                    desc = True
-            elif hint.pressed(event.pos):  # Помощь
-                click_sound.play()
-                if mistakes < 7:
-                    if score > 1:
-                        place = secret.find("_")
-                        if place != -1:
-                            score -= 2
-                            h = word[place]
-                            print(h)
-                            secret = secret[:place] + h + secret[place + 1:]
-                            for i in letters[lang]:
-                                if i == h:
-                                    i = " "
-            elif menu.pressed(event.pos):  # Меню
-                click_sound.play()
-                if menu_opened:
-                    menu_opened = False
-                else:
-                    menu_opened = True
-            elif close_description.pressed(event.pos) and desc:  # Закрыть описание
-                click_sound.play()
-                desc = False
-            elif exit_button.pressed(event.pos):  # Выход кнопкой
-                click_sound.play()
-                pygame.quit()
-                sys.exit()
-            elif game_end:  # Новая игра
-                if repeat.pressed(event.pos):
+            if mode == "game":
+                if description.pressed(event.pos):  # Описание
                     click_sound.play()
-                    game_end = False
-                    victory = False
-                    defeat = False
-                    score = 0
-                    mistakes = 0
-                    words, data = read_json(lang)
-                    msg = "None"
-                    word, prompt, secret = chose_word(difficulty)
-                    print(word)
-                    print(prompt)
-                    desc = True
-                    letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-                                      "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
-                                      "W", "X", "Y", "Z"],
-                               "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
-                                      "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
-                                      "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
-                               "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
-                                      "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
-                                      "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
-            else:  # Нажатие на алфавит
-                for j in range(len(keyboard)):
-                    if keyboard[j].pressed(event.pos):
+                    if desc:
+                        desc = False
+                    else:
+                        desc = True
+                elif hint.pressed(event.pos):  # Помощь
+                    click_sound.play()
+                    if mistakes < 7:
+                        if score > 1:
+                            place = secret.find("_")
+                            if place != -1:
+                                score -= 2
+                                h = word[place]
+                                print(h)
+                                secret = secret[:place] + h + secret[place + 1:]
+                                for i in letters[lang]:
+                                    if i == h:
+                                        i = " "
+                elif exit_button.pressed(event.pos):  # Выход кнопкой
+                    click_sound.play()
+                    pygame.quit()
+                    sys.exit()
+                elif close_description.pressed(event.pos) and desc:  # Закрыть описание
+                    click_sound.play()
+                    desc = False
+                elif menu.pressed(event.pos):  # Меню
+                    click_sound.play()
+                    if menu_opened:
+                        menu_opened = False
+                    else:
+                        menu_opened = True
+                else:  # Нажатие на алфавит
+                    if not desc:
+                        for j in range(len(keyboard)):
+                            if keyboard[j].pressed(event.pos):
+                                if letters[lang][j] != " ":
+                                    click_sound.play()
+                                    guesed = False
+                                    for i in range(len(word)):
+                                        if word[i] == letters[lang][j]:
+                                            guesed = True
+                                            secret = secret[:i] + letters[lang][j] + secret[i + 1:]
+                                            score += 1
+                                    print(letters[lang][j])
+                                    letters[lang][j] = " "
+                                    if not guesed:
+                                        if mistakes < 7:
+                                            mistakes += 1
+                if menu_opened:
+                    if sound_button.pressed(event.pos):  # Звук
                         click_sound.play()
-                        guesed = False
-                        for i in range(len(word)):
-                            if word[i] == letters[lang][j]:
-                                guesed = True
-                                secret = secret[:i] + letters[lang][j] + secret[i + 1:]
-                                score += 1
-                        print(letters[lang][j])
-                        letters[lang][j] = " "
-                        if not guesed:
-                            if mistakes < 7:
-                                mistakes += 1
+                        if sound_on:
+                            sound_button.path = "sound_off.png"
+                            pygame.mixer.Sound.set_volume(click_sound, 0)
+                            sound_on = False
+                        else:
+                            sound_button.path = "sound_on.png"
+                            pygame.mixer.Sound.set_volume(click_sound, sound_volume)
+                            sound_on = True
+                    elif music_button.pressed(event.pos):  # Музыка
+                        click_sound.play()
+                        if music_on:
+                            music_button.path = "music_off.png"
+                            pygame.mixer.music.set_volume(0)
+                            music_on = False
+                        else:
+                            music_button.path = "music.png"
+                            pygame.mixer.music.set_volume(music_volume)
+                            music_on = True
+                    elif settings_button.pressed(event.pos):  # Настройки
+                        click_sound.play()
+                        back_mode = mode
+                        mode = "settings"
+                if game_end:  # Новая игра
+                    if repeat.pressed(event.pos):
+                        click_sound.play()
+                        game_end = False
+                        victory = False
+                        defeat = False
+                        mistakes = 0
+                        words, data = read_json(lang)
+                        word, prompt, secret = chose_word(difficulty)
+                        print(word)
+                        print(prompt)
+                        desc = True
+                        letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                                          "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                                          "W", "X", "Y", "Z"],
+                                   "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
+                                          "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
+                                          "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
+                                   "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
+                                          "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
+                                          "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
+            elif mode == "settings":
+                if back_button.pressed(event.pos):  # Назад
+                    click_sound.play()
+                    mode = back_mode
+                    mode = "game"
+
     # Сама игра
     background()
     if mode == "game":
@@ -421,7 +471,7 @@ while True:
                 f = pygame.font.SysFont('Segoi Script.ttf', 30)
                 h = f.render(prompt, True, (0, 0, 0))
                 show_text(description_rect, prompt)
-            # Коныц раунда.
+            # Конец раунда.
             if secret.find("_") == -1 or mistakes > 6:
                 if mistakes > 6:
                     defeat = True
@@ -442,6 +492,8 @@ while True:
             sound_button.create_button()
             music_button.create_button()
             settings_button.create_button()
+    elif mode == "settings":  # Настройки
+        back_button.create_button()
 
     pygame.display.update()
     pygame.display.flip()
