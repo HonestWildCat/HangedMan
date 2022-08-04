@@ -13,9 +13,11 @@ pygame.display.set_icon(pygame.image.load("img/icon.ico"))
 pygame.init()
 pygame.mixer.init()
 pygame.mixer.music.load('music/Embrace.ogg')
-music_volume = pygame.mixer.music.get_volume()
+music_volume = 0.5
+pygame.mixer.music.set_volume(0.5)
 click_sound = pygame.mixer.Sound('music/click.wav')
-sound_volume = pygame.mixer.Sound.get_volume(click_sound)
+pygame.mixer.Sound.set_volume(click_sound, 0.5)
+sound_volume = 0.5
 
 
 def chose_word(difficulty):  # Рандомный выбор слова, считывание его темы и подсказки.
@@ -77,7 +79,7 @@ def alphabet():
         screen.blit(letter_surface, (start_x + space, start_y + up_space))
         keyboard[n] = Button(start_x + space, start_y + up_space, letter_width, letter_height)
         # r = pygame.Rect(start_x + space, start_y + up_space, letter_width, letter_height)
-        # pygame.draw.rect(screen, (100, 50, 55), r, letter_height, 5)
+        # pygame.draw.rect(screen, (100, 50, 55), r, letter_width, letter_height, 1)
         space += letter_width + 2 * w_p
         n += 1
 
@@ -85,7 +87,7 @@ def alphabet():
 def secret_word():
     font = pygame.font.SysFont('Segoi Script.ttf', int(110 * relative_w))
 
-    surface = pygame.Rect(w_p * 5, h_p * 13, w_p * 90, h_p * 10)
+    surface = pygame.Rect(w_p * 7, h_p * 13, w_p * 90, h_p * 10)
     start_y = surface.top + h_p
     space = 0
     if lang in ["ru", "ua"]:
@@ -116,7 +118,7 @@ class Button:  # Создает кнопку и выполняет действ�
 
     def create_button(self):
         self.write_text()
-        pygame.draw.rect(screen, (100, 50, 55), self.rect, 5)
+        # pygame.draw.rect(screen, (100, 50, 55), self.rect, 5)
         if self.path == "sound_on.png" or \
                 self.path == "sound_off.png" or \
                 self.path == "settings.png" or \
@@ -196,8 +198,52 @@ def hangedman():  # Отображение виселицы
     screen.blit(hangedman_scaled, (w_p * 7, display_height - 650 * relative_h - h_p * 2))
 
 
-lang = "ua"
-difficulty = 2
+def img(path, width, height, scale=1.0):
+    image = pygame.image.load(f'img/{path}')
+    scaled_image = pygame.transform.scale(pygame.image.load(f'img/{path}'),
+                                          (image.get_rect().size[0] * scale * relative_w,
+                                           image.get_rect().size[1] * scale * relative_h))
+    screen.blit(scaled_image, (width * w_p, height * h_p))
+    return scaled_image.get_size()
+
+
+def settings_elements(sound_volume, music_volume):
+    # Вывод слова "Настройки"
+    settings_font = pygame.font.SysFont('Segoi Script.ttf', 90)
+    w_width, w_height = (settings_font.render(message[lang]["Victory"], False, (77, 85, 194)).get_size())
+    screen.blit(settings_font.render(message[lang]["Settings"], False, (77, 85, 194)),
+                (display_width // 2 - w_width + w_p * 9.5, w_height - h_p))
+    # Вывод слов "Длинна слов"
+    settings_font = pygame.font.SysFont('Segoi Script.ttf', 50)
+    screen.blit(settings_font.render(message[lang]["Difficulty"], False, (77, 85, 194)),
+                (w_p * 67, h_p * 30))
+    # Вывод слова "Язык"
+    settings_font = pygame.font.SysFont('Segoi Script.ttf', 50)
+    if lang == "en":
+        screen.blit(settings_font.render(message[lang]["Language"], False, (77, 85, 194)),
+                    (w_p * 69.5, h_p * 55))
+    else:
+        screen.blit(settings_font.render(message[lang]["Language"], False, (77, 85, 194)),
+                    (w_p * 72, h_p * 55))
+    back_button.create_button()
+    sound_volume = int(str(sound_volume).replace(".", ""))
+    music_volume = int(str(music_volume).replace(".", ""))
+    # Звук
+    img("sound_on.png", 7, 31.4, 0.6)
+    volume_bar_size = img(f"volume_bar{sound_volume}.png", 13, 30)
+    # Музыка
+    img("music.png", 7, 51.4, 0.6)
+    music_bar_size = img(f"volume_bar{music_volume}.png", 13, 50)
+    # Сложность
+    difficulty_bar_size = img("difficulty_bar.png", 58, 40)
+    img(f"pointer{difficulty}.png", 60 + (difficulty - 1) * 6, 35)
+    # Язык
+    language_img_size = img(f"{lang}.png", 72, 60, 0.6)
+    return volume_bar_size, music_bar_size, difficulty_bar_size, language_img_size
+
+
+lang = "ru"
+difficulty = 1
 words, data = read_json(lang)
 msg = "None"
 word, prompt, secret = chose_word(difficulty)
@@ -222,46 +268,29 @@ font = pygame.font.SysFont('Segoi Script.ttf', int(40 * relative_w))
 # Сообщения
 message = {"ru": {"None": "",
                   "NotEnoughScore": "Недостаточно очков.",
-                  "Invalid input": "Введите букву, а не число или символ.",
+                  "Language": "Язык",
                   "Victory": "Вы победили!",
                   "Defeat": "Вы проиграли...",
                   "Replay": "Сыграть ещё?",
-                  "SelectDifficulty": "Выберите сложность:",
-                  "Difficulty": "  0: случайная длинна слова."
-                                "\n  1: 1-3 буквы."
-                                "\n  2: 4-6 буквы."
-                                "\n  3: 7-9 буквы."
-                                "\n  4: 10-13 буквы."
-                                "\n  5: больше 13 букв."},
+                  "Settings": "        Настройки",
+                  "Difficulty": "Длинна слов"},
            "ua": {"None": "",
                   "NotEnoughScore": "Недостатньо очків.",
-                  "Invalid input": "Введіть літеру, а не число або символ.",
+                  "Language": "Мова",
                   "Victory": "Ви виграли!",
                   "Defeat": "Ви програли...",
                   "Replay": "Грати ще?",
-                  "SelectDifficulty": "Оберіть складність:",
-                  "InvalidNumber": "Неправильне введення.",
-                  "Difficulty": "  0: випадкова довжина слова."
-                                "\n  1: 1-3 літери."
-                                "\n  2: 4-6 літер."
-                                "\n  3: 7-9 літер."
-                                "\n  4: 10-13 літер."
-                                "\n  5: більше 13 літер."
+                  "Settings": "Налаштування",
+                  "Difficulty": "Довжина слів"
                   },
            "en": {"None": "",
                   "NotEnoughScore": "Not enough points.",
-                  "Invalid input": "Enter a letter, not a number or symbol.",
+                  "Language": "Language",
                   "Victory": "You won!",
                   "Defeat": "You lost...",
                   "Replay": "Play again?",
-                  "SelectDifficulty": "Select difficulty:",
-                  "InvalidNumber": "Invalid input.",
-                  "Difficulty": "  0: random word length."
-                                "\n  1: 1-3 letters."
-                                "\n  2: 4-6 letters."
-                                "\n  3: 7-9 letters."
-                                "\n  4: 10-13 letters."
-                                "\n  5: more than 13 letters."
+                  "Settings": "Settings",
+                  "Difficulty": "Word length"
                   }}
 
 """
@@ -294,6 +323,7 @@ game_end = False
 score = 0
 desc = True
 menu_opened = False
+languages = False
 sound_on = True
 music_on = True
 keyboard = []
@@ -312,7 +342,7 @@ repeat = Button(display_width // 2 - w_p * 5, display_height // 2 + h_p * 15, w_
 sound_button = Button(display_width - w_p * 5.5, h_p * 11, w_p * 4, h_p * 6, (57, 60, 182), "sound_on.png")
 music_button = Button(display_width - w_p * 5.5, h_p * 18, w_p * 4, h_p * 6, (57, 60, 182), "music.png")
 settings_button = Button(display_width - w_p * 5.5, h_p * 25, w_p * 4, h_p * 6, (57, 60, 182), "settings.png")
-back_button = Button(display_width // 2 - w_p * 6, display_height - 20 * h_p, w_p * 15.5, h_p * 11, (57, 60, 182), "back.png")
+back_button = Button(display_width // 2 - w_p * 7.2, display_height - 20 * h_p, w_p * 15.5, h_p * 11, (57, 60, 182), "back.png")
 
 # Зацикленная музыка
 pygame.mixer.music.play(-1)
@@ -377,25 +407,28 @@ while True:
                         menu_opened = True
                 else:  # Нажатие на алфавит
                     if not desc:
-                        for j in range(len(keyboard)):
-                            if keyboard[j].pressed(event.pos):
-                                if letters[lang][j] != " ":
-                                    click_sound.play()
-                                    guesed = False
-                                    for i in range(len(word)):
-                                        if word[i] == letters[lang][j]:
-                                            guesed = True
-                                            secret = secret[:i] + letters[lang][j] + secret[i + 1:]
-                                            score += 1
-                                    print(letters[lang][j])
-                                    letters[lang][j] = " "
-                                    if not guesed:
-                                        if mistakes < 7:
-                                            mistakes += 1
+                        if not game_end:
+                            for j in range(len(keyboard)):
+                                if keyboard[j].pressed(event.pos):
+                                    print(j)
+                                    if letters[lang][j] != " ":
+                                        click_sound.play()
+                                        guesed = False
+                                        for i in range(len(word)):
+                                            if word[i] == letters[lang][j]:
+                                                guesed = True
+                                                secret = secret[:i] + letters[lang][j] + secret[i + 1:]
+                                                score += 1
+                                        print(letters[lang][j])
+                                        letters[lang][j] = " "
+                                        if not guesed:
+                                            if mistakes < 7:
+                                                mistakes += 1
                 if menu_opened:
                     if sound_button.pressed(event.pos):  # Звук
                         click_sound.play()
                         if sound_on:
+                            pygame.mixer.Sound.get_volume(click_sound)
                             sound_button.path = "sound_off.png"
                             pygame.mixer.Sound.set_volume(click_sound, 0)
                             sound_on = False
@@ -406,6 +439,7 @@ while True:
                     elif music_button.pressed(event.pos):  # Музыка
                         click_sound.play()
                         if music_on:
+                            music_volume = pygame.mixer.music.get_volume()
                             music_button.path = "music_off.png"
                             pygame.mixer.music.set_volume(0)
                             music_on = False
@@ -442,7 +476,139 @@ while True:
                 if back_button.pressed(event.pos):  # Назад
                     click_sound.play()
                     mode = back_mode
-                    mode = "game"
+                elif volume_bar.pressed(event.pos):  # Полоса громкости звуков
+                    click_sound.play()
+                    one_tenth = volume_bar.width // 10
+                    bar_max = w_p * 13 + volume_bar.width
+                    if w_p * 13 < event.pos[0] < w_p * 14:
+                        pygame.mixer.Sound.set_volume(click_sound, 0)
+                        sound_volume = 0
+                    elif event.pos[0] < one_tenth + w_p * 13.5:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.1)
+                        sound_volume = 1
+                    elif event.pos[0] <= one_tenth * 2 + w_p * 13.5:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.2)
+                        sound_volume = 2
+                    elif event.pos[0] <= one_tenth * 3 + w_p * 13.5:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.3)
+                        sound_volume = 3
+                    elif event.pos[0] <= one_tenth * 4 + w_p * 13.5:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.4)
+                        sound_volume = 4
+                    elif event.pos[0] <= one_tenth * 5 + w_p * 13:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.5)
+                        sound_volume = 5
+                    elif event.pos[0] <= one_tenth * 6 + w_p * 13:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.6)
+                        sound_volume = 6
+                    elif event.pos[0] <= one_tenth * 7 + w_p * 13:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.7)
+                        sound_volume = 7
+                    elif event.pos[0] <= one_tenth * 8 + w_p * 13:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.8)
+                        sound_volume = 8
+                    elif event.pos[0] <= one_tenth * 9 + w_p * 12:
+                        pygame.mixer.Sound.set_volume(click_sound, 0.9)
+                        sound_volume = 9
+                    elif event.pos[0] <= one_tenth * 10 + w_p * 13.5:
+                        pygame.mixer.Sound.set_volume(click_sound, 1)
+                        sound_volume = 10
+                elif music_bar.pressed(event.pos):  # Полоса громкости музыки
+                    click_sound.play()
+                    one_tenth = volume_bar.width // 10
+                    bar_max = w_p * 13 + volume_bar.width
+                    if w_p * 13 < event.pos[0] < w_p * 14:
+                        pygame.mixer.music.set_volume(0)
+                        music_volume = 0
+                    elif event.pos[0] < one_tenth + w_p * 13.5:
+                        pygame.mixer.music.set_volume(0.1)
+                        music_volume = 1
+                    elif event.pos[0] <= one_tenth * 2 + w_p * 13.5:
+                        pygame.mixer.music.set_volume(0.2)
+                        music_volume = 2
+                    elif event.pos[0] <= one_tenth * 3 + w_p * 13.5:
+                        pygame.mixer.music.set_volume(0.3)
+                        music_volume = 3
+                    elif event.pos[0] <= one_tenth * 4 + w_p * 13.5:
+                        pygame.mixer.music.set_volume(0.4)
+                        music_volume = 4
+                    elif event.pos[0] <= one_tenth * 5 + w_p * 13:
+                        pygame.mixer.music.set_volume(0.5)
+                        music_volume = 5
+                    elif event.pos[0] <= one_tenth * 6 + w_p * 13:
+                        pygame.mixer.music.set_volume(0.6)
+                        music_volume = 6
+                    elif event.pos[0] <= one_tenth * 7 + w_p * 13:
+                        pygame.mixer.music.set_volume(0.7)
+                        music_volume = 7
+                    elif event.pos[0] <= one_tenth * 8 + w_p * 13:
+                        pygame.mixer.music.set_volume(0.8)
+                        music_volume = 8
+                    elif event.pos[0] <= one_tenth * 9 + w_p * 12:
+                        pygame.mixer.music.set_volume(0.9)
+                        music_volume = 9
+                    elif event.pos[0] <= one_tenth * 10 + w_p * 13.5:
+                        pygame.mixer.music.set_volume(1)
+                        music_volume = 10
+                elif difficulty_bar.pressed(event.pos):  # Полоса сложности
+                    click_sound.play()
+                    one_fifth = difficulty_bar.width // 5
+                    bar_max = w_p * 58 + difficulty_bar.width
+                    if w_p * 58 < event.pos[0] < one_fifth + w_p * 58.5:
+                        difficulty = 1
+                    elif event.pos[0] < one_fifth * 2 + w_p * 58.5:
+                        difficulty = 2
+                    elif event.pos[0] < one_fifth * 3 + w_p * 58:
+                        difficulty = 3
+                    elif event.pos[0] < one_fifth * 4 + w_p * 58:
+                        difficulty = 4
+                    else:
+                        difficulty = 5
+                    word, prompt, secret = chose_word(difficulty)
+                    print(word)
+                    print(prompt)
+                    mistakes = 0
+                    desc = True
+                    print(difficulty)
+                elif language_change.pressed(event.pos):  # Смена языка
+                    click_sound.play()
+                    if languages:
+                        languages = False
+                    else:
+                        languages = True
+                elif languages:
+                    if lang1.pressed(event.pos):  # Смена языка 1
+                        click_sound.play()
+                        if lang == "ru":
+                            lang = "ua"
+                        elif lang == "ua":
+                            lang = "en"
+                        else:
+                            lang = "ru"
+                        words, data = read_json(lang)
+                        word, prompt, secret = chose_word(difficulty)
+                        print(word)
+                        print(prompt)
+                        mistakes = 0
+                        desc = True
+                        languages = False
+                        alphabet()
+                    elif lang2.pressed(event.pos):  # Смена языка 2
+                        click_sound.play()
+                        if lang == "ru":
+                            lang = "en"
+                        elif lang == "ua":
+                            lang = "ru"
+                        else:
+                            lang = "ua"
+                        words, data = read_json(lang)
+                        word, prompt, secret = chose_word(difficulty)
+                        print(word)
+                        print(prompt)
+                        mistakes = 0
+                        desc = True
+                        languages = False
+                        alphabet()
 
     # Сама игра
     background()
@@ -492,8 +658,31 @@ while True:
             sound_button.create_button()
             music_button.create_button()
             settings_button.create_button()
+
     elif mode == "settings":  # Настройки
-        back_button.create_button()
+        sizes = settings_elements(sound_volume, music_volume)
+        volume_bar = Button(w_p * 13, h_p * 32, sizes[0][0], sizes[0][1] - 4 * h_p)
+        music_bar = Button(w_p * 13, h_p * 52, sizes[1][0], sizes[1][1] - 4 * h_p)
+        music_bar.create_button()
+        difficulty_bar = Button(w_p * 58, h_p * 42.4, sizes[2][0], sizes[2][1] - 4 * h_p)
+        difficulty_bar.create_button()
+        language_change = Button(w_p * 72 + sizes[3][0] // 2, h_p * 60.5, sizes[3][0] // 2, sizes[3][1] - h_p)
+        language_change.create_button()
+        if languages:
+            img("menu_holder.png", 72, 65, 0.6)
+            if lang == "ru":
+                language_1 = img(f"ua_lang.png", 72.5, 67, 0.6)
+                language_2 = img(f"en_lang.png", 72.5, 73, 0.6)
+            elif lang == "ua":
+                language_1 = img(f"en_lang.png", 72.5, 67, 0.6)
+                language_2 = img(f"ru_lang.png", 72.5, 73, 0.6)
+            else:
+                language_1 = img(f"ru_lang.png", 72.5, 67, 0.6)
+                language_2 = img(f"ua_lang.png", 72.5, 73, 0.6)
+            lang1 = Button(language_1[0] + 68.8 * w_p, language_1[1] + 61 * h_p, language_1[0], language_1[1] - h_p)
+            lang2 = Button(language_2[0] + 68.8 * w_p, language_2[1] + 67 * h_p, language_2[0], language_2[1] - h_p)
+            lang1.create_button()
+            lang2.create_button()
 
     pygame.display.update()
     pygame.display.flip()
