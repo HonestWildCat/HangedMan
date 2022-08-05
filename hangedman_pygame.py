@@ -162,11 +162,18 @@ def show_text(surface, text):
     space = 2 * w_p
     up_space = 13 * h_p
     letter_height = font.render("Й", False, (77, 85, 194)).get_size()[1]
+    strings = 0
     for word in words:
         word_width = font.render(word + " ", False, (77, 85, 194)).get_size()[0]
         if start_x + space + word_width >= max_width:
-            up_space += letter_height + h_p
-            space = 2 * w_p
+            if strings < 8:
+                up_space += letter_height + h_p
+                space = 2 * w_p
+                strings += 1
+            else:
+                word_surface = font.render("... ", False, (77, 85, 194))
+                screen.blit(word_surface, (start_x + space, start_y + up_space))
+                break
 
         word_surface = font.render(word + " ", False, (77, 85, 194))
         screen.blit(word_surface, (start_x + space, start_y + up_space))
@@ -190,8 +197,7 @@ def background():  # Фон
 
 
 def hangedman():  # Отображение виселицы
-    animation = ["0.png", "1.png", "2.png", "3.png", "4.png", "5.png", "6.png", "7.png"]
-    hangedman = pygame.image.load(f'img/animation/{animation[mistakes]}')
+    hangedman = pygame.image.load(f'img/animation/{mistakes}.png')
     hangedman_scaled = pygame.transform.scale(hangedman,
                                               (450 * relative_w,
                                                650 * relative_h))
@@ -243,7 +249,7 @@ def settings_elements(sound_volume, music_volume):
 
 
 lang = "ru"
-difficulty = 1
+difficulty = 3
 words, data = read_json(lang)
 msg = "None"
 word, prompt, secret = chose_word(difficulty)
@@ -251,6 +257,7 @@ print(word)
 print(prompt)
 
 mistakes = 0
+max_mistakes = 10
 b = 7
 displayIndex = 0
 
@@ -273,7 +280,7 @@ message = {"ru": {"None": "",
                   "Defeat": "Вы проиграли...",
                   "Replay": "Сыграть ещё?",
                   "Settings": "        Настройки",
-                  "Difficulty": "Длинна слов"},
+                  "Difficulty": "Длина слов"},
            "ua": {"None": "",
                   "NotEnoughScore": "Недостатньо очків.",
                   "Language": "Мова",
@@ -358,7 +365,7 @@ while True:
             # Изменение фона(вниз) и анимации(вверх)
             if event.key == K_UP:
                 mistakes += 1
-                if mistakes == 8:
+                if mistakes == max_mistakes + 1:
                     mistakes = 0
             elif event.key == K_DOWN:
                 b += 1
@@ -381,7 +388,7 @@ while True:
                         desc = True
                 elif hint.pressed(event.pos):  # Помощь
                     click_sound.play()
-                    if mistakes < 7:
+                    if mistakes < max_mistakes:
                         if score > 1:
                             place = secret.find("_")
                             if place != -1:
@@ -410,7 +417,6 @@ while True:
                         if not game_end:
                             for j in range(len(keyboard)):
                                 if keyboard[j].pressed(event.pos):
-                                    print(j)
                                     if letters[lang][j] != " ":
                                         click_sound.play()
                                         guesed = False
@@ -419,10 +425,9 @@ while True:
                                                 guesed = True
                                                 secret = secret[:i] + letters[lang][j] + secret[i + 1:]
                                                 score += 1
-                                        print(letters[lang][j])
                                         letters[lang][j] = " "
                                         if not guesed:
-                                            if mistakes < 7:
+                                            if mistakes < max_mistakes:
                                                 mistakes += 1
                 if menu_opened:
                     if sound_button.pressed(event.pos):  # Звук
@@ -475,6 +480,8 @@ while True:
             elif mode == "settings":
                 if back_button.pressed(event.pos):  # Назад
                     click_sound.play()
+                    menu_opened = False
+                    languages = False
                     mode = back_mode
                 elif volume_bar.pressed(event.pos):  # Полоса громкости звуков
                     click_sound.play()
@@ -638,8 +645,8 @@ while True:
                 h = f.render(prompt, True, (0, 0, 0))
                 show_text(description_rect, prompt)
             # Конец раунда.
-            if secret.find("_") == -1 or mistakes > 6:
-                if mistakes > 6:
+            if secret.find("_") == -1 or mistakes > max_mistakes - 1:
+                if mistakes > max_mistakes - 1:
                     defeat = True
                 else:
                     victory = True
