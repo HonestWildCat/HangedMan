@@ -1,6 +1,6 @@
 # HangedMan
 Игра виселица
-https://youtu.be/R9Z5HLc5au4
+https://youtu.be/6inQJVcW308
 
 v 2.0
   1. Установлена максимальная длинна описания.
