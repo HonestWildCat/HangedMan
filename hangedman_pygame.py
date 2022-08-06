@@ -77,9 +77,16 @@ def alphabet():
             up_space += letter_height + h_p
             space = 0
         screen.blit(letter_surface, (start_x + space, start_y + up_space))
-        keyboard[n] = Button(start_x + space, start_y + up_space, letter_width, letter_height)
-        # r = pygame.Rect(start_x + space, start_y + up_space, letter_width, letter_height)
-        # pygame.draw.rect(screen, (100, 50, 55), r, letter_width, letter_height, 1)
+        if letter in ["Ш", "Щ", "Ю", "M", "W", "Ж"]:
+            keyboard[n] = Button(start_x + space - w_p * 0.3, start_y + up_space - 0.5 * h_p,
+                                 letter_width, letter_height - 0.5 * h_p)
+        elif letter in ["I", "Ї", "І"]:
+            keyboard[n] = Button(start_x + space - w_p * 0.5, start_y + up_space - 0.5 * h_p,
+                                 letter_width - w_p * 2, letter_height - 0.5 * h_p)
+        else:
+            keyboard[n] = Button(start_x + space - w_p * 0.5, start_y + up_space - 0.5 * h_p,
+                                 letter_width - w_p * 0.5, letter_height - 0.5 * h_p)
+        # keyboard[n].create_button()
         space += letter_width + 2 * w_p
         n += 1
 
@@ -104,7 +111,8 @@ def secret_word():
 
 
 class Button:  # Создает кнопку и выполняет действия при её нажатии
-    def __init__(self, x, y, width, height, color=(0, 0, 0), img="none.png", scale=1, inner_text="", text_color=(0, 0, 0)):
+    def __init__(self, x, y, width, height, color=(0, 0, 0), img="none.png", scale=1, inner_text="",
+                 text_color=(0, 0, 0)):
         self.x = x
         self.y = y
         self.height = height
@@ -248,7 +256,7 @@ def settings_elements(sound_volume, music_volume):
     return volume_bar_size, music_bar_size, difficulty_bar_size, language_img_size
 
 
-lang = "ru"
+lang = "ua"
 difficulty = 3
 words, data = read_json(lang)
 msg = "None"
@@ -256,14 +264,15 @@ word, prompt, secret = chose_word(difficulty)
 print(word)
 print(prompt)
 
-mistakes = 0
+min_mistakes = 3
+mistakes = min_mistakes
 max_mistakes = 10
 b = 7
 displayIndex = 0
 
 # Разрешение экрана
-display_width = 1600  # windll.user32.GetSystemMetrics(0)
-display_height = 900   # windll.user32.GetSystemMetrics(1)
+display_width = windll.user32.GetSystemMetrics(0)
+display_height = windll.user32.GetSystemMetrics(1)
 w_p = display_width // 100  # 1 процент от ширины екрана
 h_p = display_height // 100  # 1 процент от высоты екрана
 relative_w = display_width / 1600  # Относительная ширина
@@ -349,7 +358,9 @@ repeat = Button(display_width // 2 - w_p * 5, display_height // 2 + h_p * 15, w_
 sound_button = Button(display_width - w_p * 5.5, h_p * 11, w_p * 4, h_p * 6, (57, 60, 182), "sound_on.png")
 music_button = Button(display_width - w_p * 5.5, h_p * 18, w_p * 4, h_p * 6, (57, 60, 182), "music.png")
 settings_button = Button(display_width - w_p * 5.5, h_p * 25, w_p * 4, h_p * 6, (57, 60, 182), "settings.png")
-back_button = Button(display_width // 2 - w_p * 7.2, display_height - 20 * h_p, w_p * 15.5, h_p * 11, (57, 60, 182), "back.png")
+back_button = Button(display_width // 2 - w_p * 7.2, display_height - 20 * h_p, w_p * 15.5, h_p * 11,
+                     (57, 60, 182), "back.png")
+secret_button = Button(0, 0, w_p * 11, h_p * 11)
 
 # Зацикленная музыка
 pygame.mixer.music.play(-1)
@@ -366,7 +377,7 @@ while True:
             if event.key == K_UP:
                 mistakes += 1
                 if mistakes == max_mistakes + 1:
-                    mistakes = 0
+                    mistakes = min_mistakes
             elif event.key == K_DOWN:
                 b += 1
                 if b == 12:
@@ -417,6 +428,11 @@ while True:
                         if not game_end:
                             for j in range(len(keyboard)):
                                 if keyboard[j].pressed(event.pos):
+                                    try:
+                                        print(f"{j}: {letters[lang][j]}")
+                                    except IndexError:
+                                        print(j)
+                                        break
                                     if letters[lang][j] != " ":
                                         click_sound.play()
                                         guesed = False
@@ -462,7 +478,7 @@ while True:
                         game_end = False
                         victory = False
                         defeat = False
-                        mistakes = 0
+                        mistakes = min_mistakes
                         words, data = read_json(lang)
                         word, prompt, secret = chose_word(difficulty)
                         print(word)
@@ -483,6 +499,13 @@ while True:
                     menu_opened = False
                     languages = False
                     mode = back_mode
+                elif secret_button.pressed(event.pos):
+                    click_sound.play()
+                    if min_mistakes == 3:
+                        min_mistakes = 0
+                    else:
+                        min_mistakes = 3
+                    mistakes = min_mistakes
                 elif volume_bar.pressed(event.pos):  # Полоса громкости звуков
                     click_sound.play()
                     one_tenth = volume_bar.width // 10
@@ -574,7 +597,7 @@ while True:
                     word, prompt, secret = chose_word(difficulty)
                     print(word)
                     print(prompt)
-                    mistakes = 0
+                    mistakes = min_mistakes
                     desc = True
                     print(difficulty)
                 elif language_change.pressed(event.pos):  # Смена языка
@@ -592,11 +615,23 @@ while True:
                             lang = "en"
                         else:
                             lang = "ru"
+                        letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                                          "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                                          "W", "X", "Y", "Z"],
+                                   "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
+                                          "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
+                                          "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
+                                   "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
+                                          "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
+                                          "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
+                        keyboard = []
+                        for i in range(len(letters[lang])):
+                            keyboard.append(f"{i}")
                         words, data = read_json(lang)
                         word, prompt, secret = chose_word(difficulty)
                         print(word)
                         print(prompt)
-                        mistakes = 0
+                        mistakes = min_mistakes
                         desc = True
                         languages = False
                         alphabet()
@@ -608,11 +643,23 @@ while True:
                             lang = "ru"
                         else:
                             lang = "ua"
+                        letters = {"en": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+                                          "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+                                          "W", "X", "Y", "Z"],
+                                   "ru": ["А", "Б", "В", "Г", "Д", "Е", "Ё", "Ж", "З", "И", "Й", "К",
+                                          "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х",
+                                          "Ц", "Ч", "Ш", "Щ", "Ъ", "Ы", "Ь", "Э", "Ю", "Я"],
+                                   "ua": ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З",
+                                          "И", "І", "Ї", "Й", "К", "Л", "М", "Н", "О", "П", "Р",
+                                          "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ь", "Ю", "Я"]}
+                        keyboard = []
+                        for i in range(len(letters[lang])):
+                            keyboard.append(f"{i}")
                         words, data = read_json(lang)
                         word, prompt, secret = chose_word(difficulty)
                         print(word)
                         print(prompt)
-                        mistakes = 0
+                        mistakes = min_mistakes
                         desc = True
                         languages = False
                         alphabet()
@@ -667,6 +714,7 @@ while True:
             settings_button.create_button()
 
     elif mode == "settings":  # Настройки
+        secret_button.create_button()
         sizes = settings_elements(sound_volume, music_volume)
         volume_bar = Button(w_p * 13, h_p * 32, sizes[0][0], sizes[0][1] - 4 * h_p)
         music_bar = Button(w_p * 13, h_p * 52, sizes[1][0], sizes[1][1] - 4 * h_p)
